@@ -7,17 +7,21 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
+// Создаем экземпляр клиента запросов
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      {/* Компоненты для уведомлений */}
       <Toaster />
       <Sonner />
+      
+      {/* Роутинг приложения */}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          {/* Маршрут "Не найдено" (404) */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
