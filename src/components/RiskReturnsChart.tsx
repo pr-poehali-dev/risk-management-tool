@@ -6,29 +6,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent
-} from '@/components/ui/chart';
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Scatter,
-  ScatterChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-  ZAxis
-} from 'recharts';
+
+// Импорт компонентов после рефакторинга
+import PerformanceChart, { 
+  PerformanceDataPoint, 
+  PerformanceMetrics, 
+  VolatilityChart 
+} from './charts/PerformanceChart';
+import RiskReturnChart, {
+  RiskReturnDataPoint,
+  RiskMetricsCards,
+  RiskMetricsTable
+} from './charts/RiskReturnChart';
+import AllocationChart, {
+  PieDataItem,
+  AllocationRecommendations
+} from './charts/AllocationChart';
+
+// Временные интервалы для фильтрации данных
+const TIME_INTERVALS = ['1M', '3M', '6M', '1Г', '3Г', '5Г', 'MAX'];
+
+// Бенчмарки для сравнения
+const BENCHMARKS = [
+  { value: 'RTS', label: 'Индекс РТС' },
+  { value: 'MOEX', label: 'Индекс ММВБ' },
+  { value: 'SP500', label: 'S&P 500' },
+  { value: 'NASDAQ', label: 'NASDAQ' },
+  { value: 'EUROSTOXX', label: 'EURO STOXX 50' }
+];
 
 // Демо-данные для графиков
-const historyData = [
+const historyData: PerformanceDataPoint[] = [
   { month: 'Янв', portfolio: 5.2, benchmark: 4.8, risk: 8.3 },
   { month: 'Фев', portfolio: 3.8, benchmark: 2.1, risk: 9.2 },
   { month: 'Мар', portfolio: -2.3, benchmark: -3.5, risk: 15.7 },
@@ -43,7 +51,7 @@ const historyData = [
   { month: 'Дек', portfolio: 3.7, benchmark: 3.2, risk: 7.9 },
 ];
 
-const riskReturnData = [
+const riskReturnData: RiskReturnDataPoint[] = [
   { name: 'Портфель', риск: 12.7, доходность: 8.4, размер: 100 },
   { name: 'S&P 500', риск: 15.2, доходность: 9.8, размер: 80 },
   { name: 'РТС', риск: 20.5, доходность: 10.2, размер: 80 },
@@ -52,58 +60,80 @@ const riskReturnData = [
   { name: 'Биткойн', риск: 65.2, доходность: 28.7, размер: 80 },
 ];
 
-const pieData = [
+const pieData: PieDataItem[] = [
   { name: 'Акции', value: 52, fill: '#8B5CF6' },
   { name: 'Облигации', value: 32, fill: '#3B82F6' },
   { name: 'Валюта', value: 10, fill: '#10B981' },
   { name: 'Другое', value: 6, fill: '#F59E0B' },
 ];
 
-const timeIntervals = ['1M', '3M', '6M', '1Г', '3Г', '5Г', 'MAX'];
+/**
+ * Заголовок и элементы управления для анализа портфеля
+ */
+const AnalysisHeader: React.FC<{
+  selectedPeriod: string;
+  setSelectedPeriod: (period: string) => void;
+  benchmark: string;
+  setBenchmark: (benchmark: string) => void;
+}> = ({ selectedPeriod, setSelectedPeriod, benchmark, setBenchmark }) => {
+  return (
+    <div className="flex justify-between items-center">
+      <div>
+        <CardTitle className="text-xl font-medium">Анализ портфеля</CardTitle>
+        <CardDescription>Доходность и риски вашего портфеля</CardDescription>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="benchmark" className="text-sm">Бенчмарк:</Label>
+          <Select value={benchmark} onValueChange={setBenchmark}>
+            <SelectTrigger id="benchmark" className="w-36 h-9 bg-gray-700 border-gray-600">
+              <SelectValue placeholder="Выберите индекс" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-700 border-gray-600">
+              {BENCHMARKS.map(benchmark => (
+                <SelectItem key={benchmark.value} value={benchmark.value}>
+                  {benchmark.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center bg-gray-700 rounded-md p-1">
+          {TIME_INTERVALS.map((interval) => (
+            <Button
+              key={interval}
+              variant={selectedPeriod === interval ? 'default' : 'ghost'}
+              className={`h-8 px-3 text-xs ${selectedPeriod === interval ? 'bg-[#8B5CF6]' : ''}`}
+              onClick={() => setSelectedPeriod(interval)}
+            >
+              {interval}
+            </Button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
-const RiskReturnsChart = () => {
+/**
+ * Главный компонент для анализа рисков и доходности
+ */
+const RiskReturnsChart: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('1Г');
   const [benchmark, setBenchmark] = useState('RTS');
   
+  // Здесь можно добавить функции для фильтрации данных на основе выбранного периода
+
   return (
     <div className="space-y-4">
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader className="pb-2">
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-xl font-medium">Анализ портфеля</CardTitle>
-              <CardDescription>Доходность и риски вашего портфеля</CardDescription>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="benchmark" className="text-sm">Бенчмарк:</Label>
-                <Select value={benchmark} onValueChange={setBenchmark}>
-                  <SelectTrigger id="benchmark" className="w-36 h-9 bg-gray-700 border-gray-600">
-                    <SelectValue placeholder="Выберите индекс" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-700 border-gray-600">
-                    <SelectItem value="RTS">Индекс РТС</SelectItem>
-                    <SelectItem value="MOEX">Индекс ММВБ</SelectItem>
-                    <SelectItem value="SP500">S&P 500</SelectItem>
-                    <SelectItem value="NASDAQ">NASDAQ</SelectItem>
-                    <SelectItem value="EUROSTOXX">EURO STOXX 50</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center bg-gray-700 rounded-md p-1">
-                {timeIntervals.map((interval) => (
-                  <Button
-                    key={interval}
-                    variant={selectedPeriod === interval ? 'default' : 'ghost'}
-                    className={`h-8 px-3 text-xs ${selectedPeriod === interval ? 'bg-[#8B5CF6]' : ''}`}
-                    onClick={() => setSelectedPeriod(interval)}
-                  >
-                    {interval}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <AnalysisHeader 
+            selectedPeriod={selectedPeriod}
+            setSelectedPeriod={setSelectedPeriod}
+            benchmark={benchmark}
+            setBenchmark={setBenchmark}
+          />
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="performance" className="space-y-4">
@@ -119,300 +149,36 @@ const RiskReturnsChart = () => {
               </TabsTrigger>
             </TabsList>
             
+            {/* Вкладка Динамика доходности */}
             <TabsContent value="performance" className="space-y-4">
-              <Card className="bg-gray-700 border-gray-600">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Сравнительная динамика доходности</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer className="h-[350px]" config={{
-                    Портфель: { color: '#8B5CF6' },
-                    Бенчмарк: { color: '#3B82F6' }
-                  }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={historyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-                        <XAxis dataKey="month" stroke="#8E9196" />
-                        <YAxis stroke="#8E9196" />
-                        <ChartTooltip 
-                          content={<ChartTooltipContent />} 
-                        />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="portfolio"
-                          stroke="#8B5CF6"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          name="Портфель"
-                          activeDot={{ r: 6 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="benchmark"
-                          stroke="#3B82F6"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          name="Бенчмарк"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                  
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-gray-800 p-3 rounded-md flex flex-col">
-                      <span className="text-sm text-gray-400">Доходность портфеля</span>
-                      <span className="text-xl font-bold text-green-400">+8.4%</span>
-                    </div>
-                    <div className="bg-gray-800 p-3 rounded-md flex flex-col">
-                      <span className="text-sm text-gray-400">Доходность бенчмарка</span>
-                      <span className="text-xl font-bold text-green-400">+7.2%</span>
-                    </div>
-                    <div className="bg-gray-800 p-3 rounded-md flex flex-col">
-                      <span className="text-sm text-gray-400">Альфа</span>
-                      <span className="text-xl font-bold text-green-400">+1.2%</span>
-                    </div>
-                    <div className="bg-gray-800 p-3 rounded-md flex flex-col">
-                      <span className="text-sm text-gray-400">Максимальная просадка</span>
-                      <span className="text-xl font-bold text-red-400">-4.8%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gray-700 border-gray-600">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Анализ волатильности</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer className="h-[250px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={historyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-                        <XAxis dataKey="month" stroke="#8E9196" />
-                        <YAxis stroke="#8E9196" />
-                        <Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#4B5563' }} />
-                        <Line
-                          type="monotone"
-                          dataKey="risk"
-                          name="Волатильность"
-                          stroke="#F59E0B"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
+              <PerformanceChart historyData={historyData} />
+              <PerformanceMetrics 
+                portfolioReturn={8.4} 
+                benchmarkReturn={7.2} 
+                alpha={1.2} 
+                maxDrawdown={4.8}
+              />
+              <VolatilityChart historyData={historyData} />
             </TabsContent>
             
+            {/* Вкладка Риск/Доходность */}
             <TabsContent value="risk" className="space-y-4">
-              <Card className="bg-gray-700 border-gray-600">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Карта риска/доходности</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer className="h-[350px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ScatterChart
-                        margin={{
-                          top: 20,
-                          right: 20,
-                          bottom: 20,
-                          left: 20,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-                        <XAxis 
-                          type="number" 
-                          dataKey="риск" 
-                          name="Риск" 
-                          unit="%" 
-                          stroke="#8E9196"
-                          label={{ value: 'Риск (%)', position: 'bottom', fill: '#8E9196' }} 
-                        />
-                        <YAxis 
-                          type="number" 
-                          dataKey="доходность" 
-                          name="Доходность" 
-                          unit="%" 
-                          stroke="#8E9196"
-                          label={{ value: 'Доходность (%)', angle: -90, position: 'left', fill: '#8E9196' }} 
-                        />
-                        <ZAxis type="number" dataKey="размер" range={[60, 140]} />
-                        <Tooltip 
-                          cursor={{ strokeDasharray: '3 3' }}
-                          contentStyle={{ backgroundColor: '#1F2937', borderColor: '#4B5563' }}
-                          formatter={(value: number) => `${value.toFixed(2)}%`} 
-                        />
-                        <Scatter name="Портфель" data={riskReturnData} fill="#8B5CF6" />
-                      </ScatterChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="bg-gray-800 p-3 rounded-md flex flex-col">
-                      <span className="text-sm text-gray-400">Коэффициент Шарпа</span>
-                      <span className="text-xl font-bold">1.32</span>
-                    </div>
-                    <div className="bg-gray-800 p-3 rounded-md flex flex-col">
-                      <span className="text-sm text-gray-400">Коэффициент Сортино</span>
-                      <span className="text-xl font-bold">1.85</span>
-                    </div>
-                    <div className="bg-gray-800 p-3 rounded-md flex flex-col">
-                      <span className="text-sm text-gray-400">Бета</span>
-                      <span className="text-xl font-bold">0.85</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
+              <RiskReturnChart riskReturnData={riskReturnData} />
+              <RiskMetricsCards />
               <Card className="bg-gray-700 border-gray-600">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Статистика по классам активов</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-gray-600">
-                          <th className="py-2 px-4 text-left text-sm font-medium text-gray-400">Класс активов</th>
-                          <th className="py-2 px-4 text-right text-sm font-medium text-gray-400">Доля (%)</th>
-                          <th className="py-2 px-4 text-right text-sm font-medium text-gray-400">Доходность (%)</th>
-                          <th className="py-2 px-4 text-right text-sm font-medium text-gray-400">Риск (%)</th>
-                          <th className="py-2 px-4 text-right text-sm font-medium text-gray-400">Коэф. Шарпа</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-gray-700">
-                          <td className="py-2 px-4 flex items-center">
-                            <div className="w-3 h-3 rounded-full bg-[#8B5CF6] mr-2"></div>
-                            <span>Акции</span>
-                          </td>
-                          <td className="py-2 px-4 text-right">52</td>
-                          <td className="py-2 px-4 text-right text-green-400">12.5</td>
-                          <td className="py-2 px-4 text-right text-yellow-400">18.7</td>
-                          <td className="py-2 px-4 text-right">1.45</td>
-                        </tr>
-                        <tr className="border-b border-gray-700">
-                          <td className="py-2 px-4 flex items-center">
-                            <div className="w-3 h-3 rounded-full bg-[#3B82F6] mr-2"></div>
-                            <span>Облигации</span>
-                          </td>
-                          <td className="py-2 px-4 text-right">32</td>
-                          <td className="py-2 px-4 text-right text-green-400">5.2</td>
-                          <td className="py-2 px-4 text-right text-green-400">3.8</td>
-                          <td className="py-2 px-4 text-right">0.98</td>
-                        </tr>
-                        <tr className="border-b border-gray-700">
-                          <td className="py-2 px-4 flex items-center">
-                            <div className="w-3 h-3 rounded-full bg-[#10B981] mr-2"></div>
-                            <span>Валюта</span>
-                          </td>
-                          <td className="py-2 px-4 text-right">10</td>
-                          <td className="py-2 px-4 text-right text-green-400">3.8</td>
-                          <td className="py-2 px-4 text-right text-green-400">8.2</td>
-                          <td className="py-2 px-4 text-right">0.72</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 px-4 flex items-center">
-                            <div className="w-3 h-3 rounded-full bg-[#F59E0B] mr-2"></div>
-                            <span>Другое</span>
-                          </td>
-                          <td className="py-2 px-4 text-right">6</td>
-                          <td className="py-2 px-4 text-right text-green-400">8.3</td>
-                          <td className="py-2 px-4 text-right text-yellow-400">15.5</td>
-                          <td className="py-2 px-4 text-right">1.12</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <RiskMetricsTable />
                 </CardContent>
               </Card>
             </TabsContent>
             
+            {/* Вкладка Распределение */}
             <TabsContent value="allocation" className="space-y-4">
-              <Card className="bg-gray-700 border-gray-600">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Структура портфеля</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex justify-center" style={{ height: '300px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={pieData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={80}
-                              outerRadius={140}
-                              paddingAngle={2}
-                              dataKey="value"
-                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                              labelLine={false}
-                            />
-                            <Tooltip
-                              formatter={(value) => `${value}%`}
-                              contentStyle={{ backgroundColor: '#1F2937', borderColor: '#4B5563' }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    <div className="flex flex-col justify-center">
-                      <h3 className="text-lg font-medium mb-4">Распределение по классам активов</h3>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <div className="w-4 h-4 rounded-full bg-[#8B5CF6] mr-2"></div>
-                            <span>Акции</span>
-                          </div>
-                          <div className="font-medium">52%</div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <div className="w-4 h-4 rounded-full bg-[#3B82F6] mr-2"></div>
-                            <span>Облигации</span>
-                          </div>
-                          <div className="font-medium">32%</div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <div className="w-4 h-4 rounded-full bg-[#10B981] mr-2"></div>
-                            <span>Валюта</span>
-                          </div>
-                          <div className="font-medium">10%</div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <div className="w-4 h-4 rounded-full bg-[#F59E0B] mr-2"></div>
-                            <span>Другое</span>
-                          </div>
-                          <div className="font-medium">6%</div>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-6 p-4 bg-gray-800 rounded-md">
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Рекомендации по оптимизации:</h4>
-                        <ul className="text-sm space-y-2">
-                          <li className="flex gap-2">
-                            <Icon name="ArrowRight" className="text-[#8B5CF6] flex-shrink-0" size={18} />
-                            <span>Увеличить долю облигаций до 35-40% для снижения волатильности</span>
-                          </li>
-                          <li className="flex gap-2">
-                            <Icon name="ArrowRight" className="text-[#8B5CF6] flex-shrink-0" size={18} />
-                            <span>Диверсифицировать валютную часть портфеля</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <AllocationChart pieData={pieData} />
+              <AllocationRecommendations />
             </TabsContent>
           </Tabs>
         </CardContent>
